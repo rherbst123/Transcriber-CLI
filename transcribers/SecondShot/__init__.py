@@ -1,0 +1,1 @@
+# This file makes the SecondShot directory a Python package
