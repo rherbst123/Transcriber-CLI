@@ -108,7 +108,7 @@ def process_images(base_folder, prompt_path, output_dir, date_folder, model_id=N
         print(f"Error: Full_Images folder not found at {images_folder}")
         return
         
-    print(f"First Shot processing images from: {images_folder}")
+    print(f"Second Shot processing images from: {images_folder}")
     
     # Get all image files
     image_extensions = ['.png', '.jpg', '.jpeg']
@@ -141,11 +141,11 @@ def process_images(base_folder, prompt_path, output_dir, date_folder, model_id=N
         model_id = select_model()
     
     # Create output file
-    output_file = output_dir / f"{date_folder}_first_shot_transcriptions.txt"
+    output_file = output_dir / f"{date_folder}_second_shot_transcriptions.txt"
     
     # Write header to the output file
     with open(output_file, "w") as f:
-        f.write(f"First Shot Transcriber transcriptions: {Path(base_folder).name}\n")
+        f.write(f"Second Shot Transcriber transcriptions: {Path(base_folder).name}\n")
         f.write("="*80 + "\n\n")
     
     # Process each image

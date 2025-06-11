@@ -1,1 +1,0 @@
-# This file makes the FirstShot directory a Python package

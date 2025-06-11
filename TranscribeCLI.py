@@ -1,19 +1,23 @@
 from art import *
 from transcribers.FirstShot import First_Shot
 from transcribers.SecondShot import Second_Shot
+from transcribers.ThirdShot import Third_Shot
 import os
 from pathlib import Path
 
 def select_models():
-    """Select models for both First Shot and Second Shot transcribers"""
     print("\n=== Model Selection ===")
+    
     print("Select model for First Shot transcriber:")
     first_shot_model = First_Shot.select_model()
     
     print("\nSelect model for Second Shot transcriber:")
     second_shot_model = Second_Shot.select_model()
+
+    print("\nSelect model for Third Shot transcriber:")
+    third_shot_model = Third_Shot.select_model()
     
-    return first_shot_model, second_shot_model
+    return first_shot_model, second_shot_model, third_shot_model
 
 def select_folder():
     # Default path on desktop for Transcription_Ready_Images
@@ -71,29 +75,38 @@ def main():
     
     # Get prompt file
     prompt_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Prompts", "Prompt_1.5.3.txt")
-    prompt_path = input("Enter path to prompt file: ") or prompt_path #Placeholder for testing CHANGE IT
+    prompt_path = input("Enter path to prompt file: ") or prompt_path 
     print(f"Using: {prompt_path}")
     if not os.path.exists(prompt_path):
         print(f"Error: Prompt file not found at {prompt_path}")
         return
     
     # Select models for both transcribers upfront
-    first_shot_model, second_shot_model = select_models()
+    first_shot_model, second_shot_model, third_shot_model = select_models()
     
-    # Call processing functions from First_Shot.py
-    print("\n=== Running First Shot Transcriber ===")
-    # Each module has its own transcription_results folder
-    first_shot_output_dir = Path("FirstShot_results") / date_folder
-    first_shot_output_dir.mkdir(exist_ok=True, parents=True)
-    First_Shot.process_images(base_folder, prompt_path, first_shot_output_dir, date_folder, model_id=first_shot_model)
-    
-    # Second Shot
-    print("\n=== Running Second Shot Transcriber ===")
-    second_shot_output_dir = Path("SecondShot_results") / date_folder
-    second_shot_output_dir.mkdir(exist_ok=True, parents=True)
-    Second_Shot.process_images(base_folder, prompt_path, second_shot_output_dir, date_folder, model_id=second_shot_model)
-    
-    print("\nAll transcription processes completed, Thank you!")
+    try:
+        #First shot
+        print("\n=== Running First Shot Transcriber ===")
+        # Each module has its own transcription_results folder
+        first_shot_output_dir = Path("FirstShot_results") / date_folder
+        first_shot_output_dir.mkdir(exist_ok=True, parents=True)
+        First_Shot.process_images(base_folder, prompt_path, first_shot_output_dir, date_folder, model_id=first_shot_model)
+        
+        # Second Shot
+        print("\n=== Running Second Shot Transcriber ===")
+        second_shot_output_dir = Path("SecondShot_results") / date_folder
+        second_shot_output_dir.mkdir(exist_ok=True, parents=True)
+        Second_Shot.process_images(base_folder, prompt_path, second_shot_output_dir, date_folder, model_id=second_shot_model)
+        
+        # Third Shot
+        print("\n=== Running Third Shot Transcriber ===")
+        third_shot_output_dir = Path("ThirdShot_results") / date_folder
+        third_shot_output_dir.mkdir(exist_ok=True, parents=True)
+        Third_Shot.process_images(base_folder, prompt_path, third_shot_output_dir, date_folder, model_id=third_shot_model)
+        
+        print("\nAll transcription processes completed, Thank you!")
+    except Exception as e:
+        print(f"\nError during transcription process: {str(e)}")
 
 if __name__ == "__main__":
     main()
