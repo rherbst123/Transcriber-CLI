@@ -1,14 +1,30 @@
 Please transcribe all herbarium label details carefully following these explicit rules:
 
-- Do not add any * or any out of character characters Especially if using LLama Models
-- Do not include periods (.) at the end of fields.
-- Explicitly insert "N/A" if information is missing.
-- Write exactly "unsure and check" if any detail is unclear.
-- Never translate or interpret—transcribe exactly as printed.
-- Do not interpret words as symbols
-- There will be times that text is all capitlozed for names and countries, please ALWAYS format these so that they are capitalized correctly EX: (CAMEROON -> Cameroon) , (J M FAY -> J M Fay)
-- The only fields that should refrence elevation is: verbatimElevation 
-- Ensure the list creatred is only ONE list of the following fields Do not add anay other lists to the entry there is a single list created
+# Do not add any * or any out of character characters Especially if using LLama Models
+# CRITICAL: Provide EXACTLY ONE list of fields per image. NEVER repeat or duplicate the entire field list even if there are duplicate images.
+# NEVER output the same specimen data twice in a row - this is a critical error.
+# Do not include periods (.) at the end of fields.
+# Explicitly insert "N/A" if information is missing.
+# Write exactly "unsure and check" if any detail is unclear.
+# Never translate or interpret—transcribe exactly as printed.
+# Do not interpret words as symbols
+# All outputs will be in a .txt format so no bolding or italisizing whatsoever
+# There will be times that text is all capitlozed for names and countries, please ALWAYS format these so that they are capitalized correctly EX: (CAMEROON -> Cameroon) , (J M FAY -> J M Fay)
+# The only fields that should refrence elevation is: verbatimElevation 
+# Ensure the list created is only ONE list of the following fields. After completing all fields, move directly to the next image.
+
+IMPORTANT WORKFLOW INSTRUCTIONS:
+1. Process each image ONCE, creating a SINGLE list of fields.
+2. After completing all fields for one image, move to the next image.
+3. NEVER repeat the same data twice for the same image. There are ONLY 24 Fields consolidate all information you see into those fields
+4. Review your output before submitting to ensure there are no duplicated entries.
+
+FORMAT REQUIREMENTS:
+- Each field must start at the beginning of a new line with NO indentation
+- Each field name must be followed by a colon and a single space
+- After each field value, insert a blank line before the next field
+- Do NOT use asterisks, bullets, or any other formatting characters
+- Do NOT indent any text
 
 Follow precisely the formatting and field order below:
 
@@ -67,3 +83,13 @@ typeStatus:
 Transcribe exactly as printed (e.g., "Holotype", "Isotype", capitalized exactly as on label). Insert "no type status" only if explicitly absent. This might appear to be all capitolized but Please format it. EX: (ISOTYPE -> Isotype)
 
 Follow each rule exactly, transcribing only precisely visible text without interpretations or omissions.
+
+FINAL CHECK BEFORE SUBMISSION:
+1. Verify you have created EXACTLY ONE list of fields per image.
+2. # Confirm there are NO duplicate Lists for any image. This means one list of 24 Fields ONLY!
+3. Check that you have not repeated the same specimen data twice.
+5. Verify that each field starts at the beginning of a line with NO indentation.
+6. Confirm that each field has a blank line after its value.
+7. Check that there are NO bullets, asterisks or other formatting characters.
+8. For Reasoning Models Please Do not Reason further or log any corrections
+9. Do not include a prefix or intro to the response, Things like "Here is the transcribed data for the image:" do not need to be said or explained

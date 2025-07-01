@@ -3,9 +3,12 @@ from PIL import Image
 import io
 import os
 from pathlib import Path
+from datetime import datetime
+from cost_analysis import cost_tracker
+from json_output import save_json_transcription, create_batch_json_file
 
 """Hello, This portion of the script is for FULL Images. This is what looks over the full image for a good pass
-All models are listed below obviously, All this really is a fancy apu call, Just an image and a prompt. """
+All models are listed below obviously, All this really is a fancy api call, Just an image and a prompt. """
 
 
 
@@ -13,6 +16,8 @@ All models are listed below obviously, All this really is a fancy apu call, Just
 # List of available models
 AVAILABLE_MODELS = [
     "us.anthropic.claude-3-sonnet-20240229-v1:0",
+    "us.anthropic.claude-opus-4-20250514-v1:0",
+    "us.anthropic.claude-sonnet-4-20250514-v1:0",
     "us.meta.llama3-2-90b-instruct-v1:0",
     "us.meta.llama4-maverick-17b-instruct-v1:0",
     "us.amazon.nova-premier-v1:0",
@@ -20,15 +25,29 @@ AVAILABLE_MODELS = [
     "us.mistral.pixtral-large-2502-v1:0"
 ]
 
-# Resize image if too large
-def resize_image(image_bytes, max_size=(1120, 1120)):
+def standardize_image(image_bytes):
     img = Image.open(io.BytesIO(image_bytes))
-    if img.size[0] > max_size[0] or img.size[1] > max_size[1]:
-        img.thumbnail(max_size, Image.Resampling.LANCZOS)
-        img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, format=img.format)
-        return img_byte_arr.getvalue()
-    return image_bytes
+    
+    # Convert to RGB if necessary
+    if img.mode != 'RGB':
+        img = img.convert('RGB')
+    
+    width, height = img.size
+    
+    # Determine if landscape or portrait and set target size
+   
+    if width > height:  # Landscape
+        target_size = (1120, 1120)
+    else:  # Portrait
+        target_size = (1120, 1120)
+    
+    # Resize to standard dimensions
+    if img.size != target_size:
+        img = img.resize(target_size, Image.Resampling.LANCZOS)
+    
+    img_byte_arr = io.BytesIO()
+    img.save(img_byte_arr, format="PNG")
+    return img_byte_arr.getvalue()
 
 def select_model():
     
@@ -46,8 +65,9 @@ def select_model():
             print("Please enter a valid number")
 
 def convert_to_png(image_path):
-    #Convert to PNG
     img = Image.open(image_path)
+    if img.mode != 'RGB':
+        img = img.convert('RGB')
     png_bytes = io.BytesIO()
     img.save(png_bytes, format="PNG")
     return png_bytes.getvalue()
@@ -61,9 +81,9 @@ def process_image(image_path, prompt_path, model_id=None):
     if model_id is None:
         model_id = select_model()
     
-    # Convert image to PNG and resize
+    # Convert image to PNG and standardize
     image = convert_to_png(image_path)
-    image = resize_image(image)
+    image = standardize_image(image)
     
     # Read prompt
     with open(prompt_path, "r") as f:
@@ -81,14 +101,21 @@ def process_image(image_path, prompt_path, model_id=None):
         }
     ]
     
-    # Call Bedrock
+    # Call Bedrock with temperature 0.0
     response = bedrock_runtime.converse(
         modelId=model_id,
         messages=messages,
+        inferenceConfig={"temperature": 0.0}
     )
     
     # Extract and return response
     response_text = response["output"]["message"]["content"][0]["text"]
+    
+    # Track cost
+    input_tokens = cost_tracker.estimate_tokens(user_message)
+    output_tokens = cost_tracker.estimate_tokens(response_text, is_output=True)
+    cost_tracker.track_request(model_id, input_tokens, output_tokens)
+    
     print(response_text)
     return response_text
 
@@ -102,12 +129,13 @@ def process_images(base_folder, prompt_path, output_dir, date_folder, model_id=N
         date_folder: Name of the date folder for naming the output file
         model_id: Pre-selected model ID (optional)
     """
-    # Output directory is already FirstShot specific
-    # Construct path to Full_Images folder
-    images_folder = os.path.join(base_folder, "Full_Images")
-    if not os.path.exists(images_folder):
-        print(f"Error: Full_Images folder not found at {images_folder}")
-        return
+    # Check for Collaged_Images folder first (segmented images)
+    collaged_folder = os.path.join(base_folder, "Full_Images")
+    if os.path.exists(collaged_folder):
+        images_folder = collaged_folder
+    else:
+        # Use base folder directly for downloaded images
+        images_folder = base_folder
         
     print(f"First Shot processing images from: {images_folder}")
     
@@ -133,21 +161,13 @@ def process_images(base_folder, prompt_path, output_dir, date_folder, model_id=N
     
     # Sort image files by their index
     image_files.sort(key=extract_index)
-    #print("Images sorted by index for processing")
-        
-    #print("All images will be converted to PNG format for processing")
     
     # Use pre-selected model or select one if not provided
     if model_id is None:
         model_id = select_model()
     
-    # Create output file
-    output_file = output_dir / f"{date_folder}_first_shot_transcriptions.txt"
-    
-    # Write header to the output file
-    with open(output_file, "w") as f:
-        f.write(f"First Shot Transcriber transcriptions: {Path(base_folder).name}\n")
-        f.write("="*80 + "\n\n")
+    # Store all transcriptions for batch file
+    all_transcriptions = []
     
     # Process each image
     print(f"\nFound {len(image_files)} images to process")
@@ -159,22 +179,45 @@ def process_images(base_folder, prompt_path, output_dir, date_folder, model_id=N
             # Process the image using the selected model
             response_text = process_image(image_path, prompt_path, model_id)
             
-            # Append result to the single output file
-            with open(output_file, "a") as f:
-                f.write(f"Image: {image_path.name}\n")
-                #f.write("-"*80 + "\n")
-                f.write(response_text)
-                f.write("\n\n" + "="*80 + "\n\n")
+            # Get token counts for this request
+            with open(prompt_path, "r") as f:
+                user_message = f.read().strip()
+            input_tokens = cost_tracker.estimate_tokens(user_message)
+            output_tokens = cost_tracker.estimate_tokens(response_text, is_output=True)
             
-            print(f"Completed to: {output_file}")
+            # Save individual JSON file
+            json_filepath = save_json_transcription(
+                output_dir, date_folder, "first_shot", 
+                image_path.name, response_text, model_id, 
+                input_tokens, output_tokens
+            )
+            
+            # Add to batch collection
+            from json_output import create_json_response
+            json_response = create_json_response(
+                image_path.name, response_text, model_id, 
+                input_tokens, output_tokens
+            )
+            all_transcriptions.append(json_response)
+            
+            print(f"JSON saved to: {json_filepath}")
             
         except Exception as e:
             print(f"Error processing {image_path.name}: {str(e)}")
-            # Log error to the output file
-            with open(output_file, "a") as f:
-                f.write(f"Error processing {image_path.name}: {str(e)}\n\n")
+            # Create error JSON response
+            error_response = {
+                "error": str(e),
+                "image_name": image_path.name,
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            }
+            all_transcriptions.append(error_response)
     
-    print(f"First Shot processing completed successfully! Results saved to {output_file}")
+    # Create batch JSON file
+    if all_transcriptions:
+        batch_filepath = create_batch_json_file(output_dir, date_folder, "first_shot", all_transcriptions)
+        print(f"Batch JSON file created: {batch_filepath}")
+    
+    print(f"First Shot processing completed successfully! JSON files saved to {output_dir}")
 
 # Allow running this module directly for testing
 if __name__ == "__main__":
