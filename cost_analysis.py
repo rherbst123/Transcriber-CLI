@@ -134,7 +134,7 @@ class CostTracker:
             report.append(f"  Output: ${pricing['output']*1000:.2f}")
         
         report.append("")
-        report.append("Note: Token counts are estimated. Actual costs may vary.")
+        
         report.append("=" * 80)
         
         return "\n".join(report)

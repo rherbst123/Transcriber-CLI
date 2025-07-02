@@ -2,3 +2,4 @@ art
 boto3
 Pillow
 requests
+pathlib
